@@ -1,34 +1,38 @@
 ﻿import os
-import sys
 import re
+import sys
 
-def rename_items(path):
-    for root, dirs, files in os.walk(path):
-        items = dirs + files  # 合并文件和目录列表
-        for name in items:
-            # 正则表达式匹配数字，同时允许数字前后有任意非数字字符
-            matches = re.findall(r'(?<=\D)(\d+)(?=\D)', name)
-            if matches:
-                new_name = name  # 初始化新名称为原名称
-                for num_str in matches:
-                    # 对每个匹配的数字进行四位数补零处理，并替换回原名称中
-                    num = int(num_str)
-                    formatted_num = f"{num:04d}"
-                    new_name = re.sub(rf"(?<=\D){re.escape(num_str)}(?=\D)", formatted_num, new_name)
-                # 如果名称有变化，则进行重命名
-                if new_name != name:
-                    old_path = os.path.join(root, name)
-                    new_path = os.path.join(root, new_name)
-                    os.rename(old_path, new_path)
-                    print(f"Renamed '{old_path}' to '{new_path}'")
 
-def main():
-    if len(sys.argv) != 2:  # 检查是否提供了一个参数
-        print("Usage: python script.py <directory_path>")
-        sys.exit(1)
-    
-    target_path = sys.argv[1]  # 获取拖放或命令行指定的路径
-    rename_items(target_path)
+def rename_files_and_dirs(path, pad_width=4):
+    for item in os.listdir(path):
+        old_item_path = os.path.join(path, item)
+        if os.path.isfile(old_item_path):
+            new_name = pad_numbers_in_name(item, pad_width)
+            new_item_path = os.path.join(path, new_name)
+            os.rename(old_item_path, new_item_path)
+            print(f"File renamed: {item} -> {new_name}")
+        elif os.path.isdir(old_item_path):
+            new_name = pad_numbers_in_name(item, pad_width)
+            new_item_path = os.path.join(path, new_name)
+            os.rename(old_item_path, new_item_path)
+            print(f"Directory renamed: {item} -> {new_name}")
+            rename_files_and_dirs(new_item_path, pad_width)
+
+
+def pad_numbers_in_name(name, width):
+    """
+    查找名称中的所有数字序列，并将其格式化为指定的宽度。
+    """
+    # 正则表达式匹配所有的数字序列
+    return re.sub(r'\d+', lambda x: x.group().zfill(width), name)
+
+
+def main(dir_path):
+    rename_files_and_dirs(dir_path)
+
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 2:
+        print("Usage: python script.py <directory_path>")
+    else:
+        main(sys.argv[1])
